@@ -39,16 +39,3 @@ resource "aws_s3_bucket_policy" "website" {
   })
 }
 
-resource "aws_s3_object" "index" {
-  bucket       = aws_s3_bucket.example.id
-  key          = "index.html"
-  source       = "${path.module}/index.html"
-  content_type = "text/html"
-}
-
-resource "aws_s3_object" "css" {
-  bucket       = aws_s3_bucket.example.id
-  key          = "styles.css"
-  source       = "${path.module}/styles.css"
-  content_type = "text/css"
-}
