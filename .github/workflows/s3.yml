@@ -1,18 +1,19 @@
-name : Deploy S3 Bucket and index.html file 
+name: Deploy S3 Bucket and index.html file
 
 on:
   push:
-    branches : [ "main" ]
+    branches: ["main"]
 
 env:
   AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
   AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-  TF_VAR_bucket_name: "rajat-terraform-s3-bucket-007"
+  TF_VAR_bucket_name: "rajat-terraform-s3-bucket-006"
   TF_VAR_environment: "dev"
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -22,22 +23,27 @@ jobs:
         with:
           terraform_version: "1.12.0"
 
-      - name:  Terraform Format
+      - name: Terraform Format
         run: terraform fmt -check
 
       - name: Terraform Init
         run: terraform init
 
       - name: Terraform Validate
-        run: terraform validate  
+        run: terraform validate
 
+      - name: Check S3 Bucket Public Access
+        run: |
+          aws s3api get-public-access-block \
+            --bucket $TF_VAR_bucket_name || true
 
+      - name: Check AWS Account Public Access
+        run: |
+          aws s3control get-public-access-block \
+            --account-id $(aws sts get-caller-identity --query Account --output text) || true
 
       - name: Terraform Plan
         run: terraform plan
 
       - name: Terraform Apply
         run: terraform apply -auto-approve
-
-
-
