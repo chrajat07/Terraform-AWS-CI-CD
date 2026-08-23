@@ -1,4 +1,4 @@
-name: Deploy S3 Bucket and index.html file
+name: Deploy S3 Bucket and index.html files
 
 on:
   push:
