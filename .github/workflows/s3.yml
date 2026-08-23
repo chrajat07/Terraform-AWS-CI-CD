@@ -1,50 +1,86 @@
-name: Deploy S3 Bucket and index.html files
+name: Deploy S3 Website
 
 on:
   push:
     branches: ["main"]
 
+  workflow_dispatch:
+
 env:
   AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
   AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+  AWS_DEFAULT_REGION: ap-south-1
+
   TF_VAR_bucket_name: "rajat-terraform-s3-bucket-006"
   TF_VAR_environment: "dev"
-  AWS_DEFAULT_REGION: "us-east-1"
 
+  
 jobs:
   deploy:
     runs-on: ubuntu-latest
 
     steps:
+
+      # 1. Checkout repository
       - name: Checkout code
         uses: actions/checkout@v4
 
+      # 2. Setup Terraform
       - name: Set up Terraform
         uses: hashicorp/setup-terraform@v4
         with:
           terraform_version: "1.12.0"
 
+      # 3. Check Terraform formatting
       - name: Terraform Format
         run: terraform fmt -check
 
+      # 4. Initialize Terraform
       - name: Terraform Init
         run: terraform init
 
+      # 5. Validate Terraform configuration
       - name: Terraform Validate
         run: terraform validate
 
-      - name: Check S3 Bucket Public Access
+      # 6. Check whether S3 bucket already exists
+      - name: Check S3 Bucket
+        id: bucket_check
         run: |
-          aws s3api get-public-access-block \
-            --bucket $TF_VAR_bucket_name || true
+          if aws s3api head-bucket --bucket "$TF_VAR_bucket_name" 2>/dev/null; then
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+            echo "S3 bucket already exists."
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+            echo "S3 bucket does not exist."
+          fi
 
-      - name: Check AWS Account Public Access
-        run: |
-          aws s3control get-public-access-block \
-            --account-id $(aws sts get-caller-identity --query Account --output text) || true
-
+      # 7. Terraform Plan
       - name: Terraform Plan
         run: terraform plan
 
+      # 8. Create infrastructure only if bucket does not exist
       - name: Terraform Apply
+        if: steps.bucket_check.outputs.exists == 'false'
         run: terraform apply -auto-approve
+
+      # 9. Delete old website files
+      - name: Delete Existing Website Files
+        run: |
+          aws s3 rm "s3://$TF_VAR_bucket_name/index.html" || true
+          aws s3 rm "s3://$TF_VAR_bucket_name/styles.css" || true
+
+      # 10. Upload latest website files
+      - name: Upload Website Files
+        run: |
+          aws s3 cp index.html "s3://$TF_VAR_bucket_name/index.html" \
+            --content-type "text/html"
+
+          aws s3 cp styles.css "s3://$TF_VAR_bucket_name/styles.css" \
+            --content-type "text/css"
+
+      # 11. Show deployment result
+      - name: Deployment Complete
+        run: |
+          echo "Website deployed successfully!"
+          echo "Bucket: $TF_VAR_bucket_name"
