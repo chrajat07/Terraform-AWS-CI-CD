@@ -8,7 +8,7 @@ resource "aws_s3_bucket" "example" {
 }
 
 resource "aws_s3_bucket_website_configuration" "website" {
-  bucket = example.id
+  bucket = aws_s3_bucket.example.id
 
   index_document {
     suffix = "index.html"
@@ -16,7 +16,7 @@ resource "aws_s3_bucket_website_configuration" "website" {
 }
 
 resource "aws_s3_bucket_public_access_block" "website" {
-  bucket = example.id
+  bucket = aws_s3_bucket.example.id
 
   block_public_acls       = false
   block_public_policy     = false
@@ -25,7 +25,7 @@ resource "aws_s3_bucket_public_access_block" "website" {
 }
 
 resource "aws_s3_bucket_policy" "website" {
-  bucket = example.id
+  bucket = aws_s3_bucket.example.id
 
   policy = jsonencode({
     Version = "2012-10-17"
@@ -34,20 +34,20 @@ resource "aws_s3_bucket_policy" "website" {
       Effect    = "Allow"
       Principal = "*"
       Action    = "s3:GetObject"
-      Resource  = "${aws_s3_bucket.website.arn}/*"
+      Resource  = "${aws_s3_bucket.example.arn}/*"
     }]
   })
 }
 
 resource "aws_s3_object" "index" {
-  bucket       = example.id
+  bucket       = aws_s3_bucket.example.id
   key          = "index.html"
   source       = "${path.module}/index.html"
   content_type = "text/html"
 }
 
 resource "aws_s3_object" "css" {
-  bucket       = example.id
+  bucket       = aws_s3_bucket.example.id
   key          = "styles.css"
   source       = "${path.module}/styles.css"
   content_type = "text/css"
